@@ -1,0 +1,36 @@
+services:
+  netword:
+    build: .
+    image: netword:latest
+    container_name: netword
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3000
+      DATA_DIR: /app/data
+      # Optional: set a long random secret instead of the auto-generated one.
+      # SESSION_SECRET: replace-with-a-64-char-random-string
+      # Optional limits (0 = unlimited):
+      # MAX_UPLOAD_BYTES: 0
+      # ROOM_QUOTA_BYTES: 0
+      # ROOM_TTL_HOURS: 24
+      # Set to true only when serving HTTPS:
+      # COOKIE_SECURE: "false"
+    volumes:
+      - netword-data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: >-
+        node -e "fetch('http://127.0.0.1:3000/api/health')
+          .then(r => process.exit(r.ok ? 0 : 1))
+          .catch(() => process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  netword-data:
+    name: netword-data
