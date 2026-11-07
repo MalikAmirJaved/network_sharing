@@ -98,6 +98,16 @@ async function serve(
     start !== undefined && end !== undefined ? { start, end } : undefined,
   );
 
+  // The client may close the connection mid-download. Stop reading from disk
+  // and don't keep pushing into a dead socket.
+  if (request.signal.aborted) {
+    stream.destroy();
+    return new Response(null, { status: 499 });
+  }
+  request.signal.addEventListener("abort", () => stream.destroy(), {
+    once: true,
+  });
+
   return new Response(
     Readable.toWeb(stream) as ReadableStream<Uint8Array>,
     { status, headers },

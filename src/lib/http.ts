@@ -30,6 +30,25 @@ export function json<T>(data: T, init?: ResponseInit): NextResponse<T> {
   return NextResponse.json(data, init);
 }
 
+/**
+ * The client closed the connection mid-request (cancelled upload/download,
+ * navigated away, closed the tab). Expected on a LAN app — not a server error.
+ */
+function isClientAbort(error: unknown): boolean {
+  if (error instanceof Error) {
+    if (error.name === "AbortError") return true;
+    if ((error as { code?: string }).code === "ABORT_ERR") return true;
+  }
+  if (
+    typeof DOMException !== "undefined" &&
+    error instanceof DOMException &&
+    error.name === "AbortError"
+  ) {
+    return true;
+  }
+  return false;
+}
+
 export function errorResponse(error: unknown): NextResponse<ApiErrorBody> {
   if (error instanceof ApiError) {
     return NextResponse.json(
@@ -43,6 +62,17 @@ export function errorResponse(error: unknown): NextResponse<ApiErrorBody> {
     return NextResponse.json(
       { error: "invalid_request", message },
       { status: 400 },
+    );
+  }
+
+  if (isClientAbort(error)) {
+    console.log("[api] client disconnected", error);
+    return NextResponse.json(
+      {
+        error: "client_disconnected",
+        message: "The client closed the connection",
+      },
+      { status: 499 },
     );
   }
 
